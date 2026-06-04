@@ -1,72 +1,103 @@
 # martian-engine
 
-**The schema and renderer for MartianBook — language-agnostic.**
+**Language-agnostic schema and renderer for MartianBook.**
 
-`martian-engine` is the canonical definition of what a MartianBook *is* and how it renders. Every language adapter (Python, Rust, TypeScript, C++, ...) produces a `report.json` conforming to the schema defined here. `martian-engine` consumes that file and renders a MartianBook.
-
----
-
-## Why this exists
-
-The original renderer lived inside the Python `martianbook` package. That meant: to render a Rust execution report, you needed Python installed. That's wrong.
-
-`martian-engine` fixes this:
+Any language adapter — Python, Rust, TypeScript, C++ — produces a `report.json`. `martian-engine` turns it into a MartianBook. No Python required.
 
 ```
 python script  ─┐
-rust binary    ─┼──► report.json ──► martian-engine ──► MartianBook
+rust binary    ─┼──► .martian/report.json ──► mars serve ──► MartianBook
 typescript app ─┘
-```
-
-The engine is the single source of truth for both the schema and the rendering. Adapters in any language just need to emit a valid `report.json`.
-
----
-
-## Structure
-
-```
-martian-engine/
-├── schema/
-│   └── report.schema.json     ← JSON Schema (source of truth)
-├── app/                       ← React + Vite + TypeScript renderer
-│   ├── bin/
-│   │   └── martian-engine.js  ← CLI entry point
-│   ├── src/
-│   │   ├── lib/
-│   │   │   ├── schema.ts      ← IR types + query helpers
-│   │   │   └── highlight.ts   ← client-side Python syntax highlighting
-│   │   ├── components/        ← React components
-│   │   └── styles/            ← CSS design tokens + base styles
-│   └── public/
-│       └── report.json        ← drop your report here for dev
-└── README.md
 ```
 
 ---
 
 ## Installation
 
-Build once, run anywhere:
+Requires Node.js ≥ 18.
 
 ```bash
-cd app
+git clone https://github.com/martianbook/martian-engine
+cd martian-engine/app
 pnpm install
 pnpm build
-npm install -g .   # installs the `mars` command globally
+npm install -g .
+```
+
+Verify:
+
+```bash
+mars
+```
+
+To update after pulling new changes:
+
+```bash
+pnpm build
+npm install -g .
 ```
 
 ---
 
 ## Usage
 
+Run from any project directory that has a `.martian/report.json`:
+
 ```bash
-mars serve              # finds .martian/report.json in current directory
+# Serve live in browser
+mars serve
+
+# Serve a specific report
 mars serve path/to/report.json
+
+# Serve on a custom port
 mars serve --port=8080
 
-mars export             # exports martianbook.html in current directory
-mars export -o out.html
+# Export a standalone HTML file
+mars export
+
+# Export to a specific path
+mars export -o report.html
 ```
+
+`mars serve` re-reads `report.json` on every browser refresh — so you can run your adapter, refresh, and see the new book instantly without restarting.
+
+`mars export` produces a fully self-contained HTML file with all assets and artifact images inlined as base64. Zero external dependencies. Works offline. Safe to email or attach to a PR.
+
+---
+
+## Quick start with Python
+
+```bash
+pip install martianbook
+
+# Instrument your code
+import martianbook as martian
+
+@martian.capture
+def load_data(path: str):
+    """Loads raw CSV data."""
+    ...
+
+# Run
+martian main.py
+
+# View
+mars serve
+```
+
+---
+
+## Quick start with Rust
+
+```bash
+cargo run
+
+# View
+mars serve
+```
+
+See `martianbook/martian-rust` for the Rust adapter.
 
 ---
 
@@ -75,26 +106,41 @@ mars export -o out.html
 ```bash
 cd app
 pnpm dev        # → http://localhost:5173
-# drop a report.json into app/public/ to load data
+```
+
+Drop a `report.json` into `app/public/` to load data in dev mode.
+
+```bash
+pnpm build      # production build → app/dist/
+pnpm typecheck  # tsc --noEmit
 ```
 
 ---
 
-## Building
+## Structure
 
-```bash
-cd app
-pnpm build      # → app/dist/
-pnpm typecheck  # run tsc --noEmit
+```
+martian-engine/
+├── schema/
+│   └── report.schema.json     ← JSON Schema (canonical contract)
+└── app/
+    ├── bin/
+    │   └── martian-engine.js  ← mars CLI
+    ├── src/
+    │   ├── lib/
+    │   │   ├── schema.ts      ← IR types + query helpers
+    │   │   └── highlight.ts   ← syntax highlighting
+    │   ├── components/        ← React components
+    │   └── styles/            ← CSS tokens + base styles
+    └── public/
+        └── report.json        ← dev data (gitignored)
 ```
 
 ---
 
 ## Schema
 
-The Martian IR is defined in `schema/report.schema.json` and mirrored as TypeScript types in `app/src/lib/schema.ts`.
-
-Key fields:
+The Martian IR is defined in `schema/report.schema.json` and mirrored as TypeScript interfaces in `app/src/lib/schema.ts`. Adapters in any language must emit a `report.json` conforming to this schema.
 
 ```json
 {

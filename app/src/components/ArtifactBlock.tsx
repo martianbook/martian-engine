@@ -11,6 +11,9 @@ export default function ArtifactBlock({ artifact }: Props) {
   const [open, setOpen] = useState(true)
   const name    = artifact.label ?? artifact.path.split('/').pop() ?? artifact.path
   const isImage = IMAGE_FORMATS.has(artifact.format.toLowerCase())
+  const imgSrc = artifact.path.startsWith('data:')
+    ? artifact.path                          // export mode — already base64
+    : `/${artifact.path}`                    // serve mode — prepend / for HTTP route
 
   return (
     <div className="block block--artifact">
@@ -23,7 +26,7 @@ export default function ArtifactBlock({ artifact }: Props) {
           {isImage && (
             <img
               className="artifact-img"
-              src={artifact.path}
+              src={imgSrc}
               alt={name}
               onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
             />

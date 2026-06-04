@@ -1,17 +1,8 @@
 #!/usr/bin/env node
-/**
- * martian-engine CLI
- *
- * Usage:
- *   martian-engine serve              → serve .martian/report.json on localhost
- *   martian-engine serve path/to/report.json
- *   martian-engine export             → export martianbook.html
- *   martian-engine export -o out.html
- */
 
 import { createServer } from 'http'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
-import { resolve, dirname } from 'path'
+import { resolve, dirname, extname } from 'path'
 import { fileURLToPath } from 'url'
 import { execSync } from 'child_process'
 
@@ -22,17 +13,11 @@ const args    = process.argv.slice(2)
 const command = args[0]
 
 function findReport(maybeArg) {
-  const candidates = [
-    maybeArg,
-    '.martian/report.json',
-    'report.json',
-  ].filter(Boolean)
-
+  const candidates = [maybeArg, '.martian/report.json', 'report.json'].filter(Boolean)
   for (const c of candidates) {
     const p = resolve(process.cwd(), c)
     if (existsSync(p)) return p
   }
-
   console.error('\n  ✗ No report.json found.')
   console.error('    Run your martian adapter first (e.g. martian main.py)\n')
   process.exit(1)
@@ -47,41 +32,85 @@ function loadReport(reportPath) {
   }
 }
 
+function normalizeArtifactPaths(report) {
+  const cwd = process.cwd()
+  report.artifacts = (report.artifacts ?? []).map(art => ({
+    ...art,
+    path: art.path.startsWith('/') && art.path.startsWith(cwd)
+      ? art.path.slice(cwd.length + 1)
+      : art.path
+  }))
+  return report
+}
+
+const IMAGE_FORMATS = new Set(['png', 'jpg', 'jpeg', 'svg'])
+const MIME = {
+  png:  'image/png',
+  jpg:  'image/jpeg',
+  jpeg: 'image/jpeg',
+  svg:  'image/svg+xml',
+}
+
+function inlineArtifacts(report) {
+  report.artifacts = report.artifacts.map(art => {
+    if (!IMAGE_FORMATS.has(art.format.toLowerCase())) return art
+    const absPath = resolve(process.cwd(), art.path)
+    if (!existsSync(absPath)) return art
+    try {
+      const data = readFileSync(absPath)
+      const mime = MIME[art.format.toLowerCase()]
+      return { ...art, path: `data:${mime};base64,${data.toString('base64')}` }
+    } catch {
+      return art
+    }
+  })
+  return report
+}
+
 // ── serve ──────────────────────────────────────────────────────────────────
 
 function serve(reportArg, port = 7420) {
   const reportPath = findReport(reportArg)
-  const report     = loadReport(reportPath)
-
-  // Read dist assets
-  const indexHtml = readFileSync(resolve(DIST, 'index.html'), 'utf-8')
+  const indexHtml  = readFileSync(resolve(DIST, 'index.html'), 'utf-8')
 
   const server = createServer((req, res) => {
     if (req.url === '/' || req.url === '/index.html') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
       res.end(indexHtml)
+
     } else if (req.url === '/report.json') {
-      // Always re-read so file changes are picked up on refresh
-      const fresh = readFileSync(reportPath, 'utf-8')
-      res.writeHead(200, { 'Content-Type': 'application/json' })
-      res.end(fresh)
+    const fresh = JSON.parse(readFileSync(reportPath, 'utf-8'))
+    normalizeArtifactPaths(fresh)
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify(fresh))
     } else if (req.url.startsWith('/assets/')) {
-      // Serve built JS/CSS assets
       const assetPath = resolve(DIST, req.url.slice(1))
       try {
         const content = readFileSync(assetPath)
-        const ct = req.url.endsWith('.js')  ? 'application/javascript'
+        const ct = req.url.endsWith('.js') ? 'application/javascript'
                  : req.url.endsWith('.css') ? 'text/css'
                  : 'application/octet-stream'
         res.writeHead(200, { 'Content-Type': ct })
         res.end(content)
       } catch {
-        res.writeHead(404)
-        res.end()
+        res.writeHead(404); res.end()
       }
+
+    } else if (req.url.startsWith('/.martian/artifacts/') || req.url.startsWith('/artifacts/')) {
+      // Serve artifact files from CWD
+      const artifactPath = resolve(process.cwd(), req.url.slice(1))
+      try {
+        const content = readFileSync(artifactPath)
+        const ext  = extname(artifactPath).slice(1).toLowerCase()
+        const mime = MIME[ext] || 'application/octet-stream'
+        res.writeHead(200, { 'Content-Type': mime })
+        res.end(content)
+      } catch {
+        res.writeHead(404); res.end()
+      }
+
     } else {
-      res.writeHead(404)
-      res.end()
+      res.writeHead(404); res.end()
     }
   })
 
@@ -90,8 +119,6 @@ function serve(reportArg, port = 7420) {
     console.log(`\n  ◈ MartianBook  ${url}`)
     console.log(`    report: ${reportPath}`)
     console.log(`    Press Ctrl+C to stop.\n`)
-
-    // Open browser
     const open = process.platform === 'darwin' ? 'open'
                : process.platform === 'win32'  ? 'start'
                : 'xdg-open'
@@ -104,11 +131,11 @@ function serve(reportArg, port = 7420) {
 function exportHtml(reportArg, outPath = 'martianbook.html') {
   const reportPath = findReport(reportArg)
   const report     = loadReport(reportPath)
+  normalizeArtifactPaths(report)
+  const inlined    = inlineArtifacts(structuredClone(report))
 
-  // Read the built index.html and inject the report as window.__MARTIAN_REPORT__
   let html = readFileSync(resolve(DIST, 'index.html'), 'utf-8')
 
-  // Inline JS and CSS assets so the file is fully self-contained
   html = html.replace(
     /<script type="module" crossorigin src="(\/assets\/[^"]+)"><\/script>/,
     (_, src) => {
@@ -124,11 +151,9 @@ function exportHtml(reportArg, outPath = 'martianbook.html') {
     }
   )
 
-  // Inject report data
-  const injection = `<script>window.__MARTIAN_REPORT__ = ${JSON.stringify(report)};</script>`
+  const injection = `<script>window.__MARTIAN_REPORT__ = ${JSON.stringify(inlined)};</script>`
   html = html.replace('<!-- __MARTIAN_REPORT_INJECTION__ -->', injection)
 
-  // Set title
   const title = report.mission?.entry_point ?? 'MartianBook'
   html = html.replace('<!-- __MARTIAN_TITLE__ -->', `<title>MartianBook — ${title}</title>`)
 
@@ -160,10 +185,10 @@ switch (command) {
   martian-engine — MartianBook renderer
 
   Usage:
-    martian-engine serve              serve .martian/report.json
-    martian-engine serve report.json  serve a specific report
-    martian-engine export             export martianbook.html
-    martian-engine export -o out.html export to specific path
-    martian-engine export --port=8080 serve on custom port
+    mars serve              serve .martian/report.json
+    mars serve report.json  serve a specific report
+    mars export             export martianbook.html
+    mars export -o out.html export to specific path
+    mars serve --port=8080  serve on custom port
 `)
 }
