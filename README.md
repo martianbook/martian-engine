@@ -1,6 +1,13 @@
-# martian-engine
+<!-- LOGO -->
+<p align="center">
+    <img width="570" alt="martian-engine" src="https://github.com/user-attachments/assets/000ca4c9-79fa-4f2c-a6b3-2a69ce9de099" />
+</p>
 
-**Language-agnostic schema and renderer for MartianBook.**
+<p align="center">
+  <strong>Language-agnostic schema and renderer for MartianBook.</strong>
+</p>
+
+****
 
 Any language adapter — Python, Rust, TypeScript, C++ — produces a `report.json`. `martian-engine` turns it into a MartianBook. No Python required.
 
