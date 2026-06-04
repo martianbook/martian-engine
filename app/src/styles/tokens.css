@@ -1,0 +1,71 @@
+/* ── martian-engine design tokens ────────────────────────────────────────
+   Font: "Berkeley Mono" feel via monospace stack for code,
+         "Syne" display for UI chrome — loaded from Google Fonts in index.html
+   Aesthetic: mission control terminal. Dense, precise, no decoration.
+   ──────────────────────────────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --font-ui:   'Syne', 'Helvetica Neue', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --radius:    6px;
+  --radius-sm: 3px;
+  --t:         0.14s ease;
+}
+
+/* ── Dark theme (default) ───────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:            #09090b;
+  --bg-surface:    #0f0f12;
+  --bg-elevated:   #141418;
+  --bg-code:       #0a0a0d;
+  --border:        #1c1c24;
+  --border-bright: #2a2a38;
+
+  --text:          #e4e4e8;
+  --text-muted:    #7a7a8a;
+  --text-dim:      #3a3a4a;
+
+  --accent:        #6ee7b7;    /* martian green */
+  --accent-dim:    #0d2318;
+  --red:           #f87171;
+  --red-dim:       #1f0c0c;
+  --amber:         #fbbf24;
+  --purple:        #a78bfa;
+  --purple-dim:    #1a1527;
+
+  --stdout:        #6ee7b7;
+  --stderr:        #f87171;
+  --ret:           #93c5fd;
+
+  color-scheme: dark;
+}
+
+/* ── Light theme ────────────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg:            #f9fafb;
+  --bg-surface:    #ffffff;
+  --bg-elevated:   #f3f4f6;
+  --bg-code:       #f8f9fa;
+  --border:        #e5e7eb;
+  --border-bright: #d1d5db;
+
+  --text:          #111827;
+  --text-muted:    #6b7280;
+  --text-dim:      #d1d5db;
+
+  --accent:        #059669;
+  --accent-dim:    #d1fae5;
+  --red:           #dc2626;
+  --red-dim:       #fee2e2;
+  --amber:         #d97706;
+  --purple:        #7c3aed;
+  --purple-dim:    #ede9fe;
+
+  --stdout:        #059669;
+  --stderr:        #dc2626;
+  --ret:           #2563eb;
+
+  color-scheme: light;
+}

@@ -1,0 +1,62 @@
+/* Syntax token CSS — mirrors martianbook highlight.py token categories */
+
+[data-theme="dark"] {
+  --hl-kw:        #c792ea;
+  --hl-func:      #82aaff;
+  --hl-class:     #ffcb6b;
+  --hl-decorator: #c792ea;
+  --hl-builtin:   #80cbc4;
+  --hl-magic:     #80cbc4;
+  --hl-exception: #f07178;
+  --hl-type:      #ffcb6b;
+  --hl-str:       #c3e88d;
+  --hl-doc:       #546e7a;
+  --hl-interp:    #89ddff;
+  --hl-escape:    #f78c6c;
+  --hl-num:       #f78c6c;
+  --hl-comment:   #546e7a;
+  --hl-op:        #89ddff;
+  --hl-punct:     #89ddff;
+  --hl-var:       #eeffff;
+  --hl-error:     #f07178;
+}
+
+[data-theme="light"] {
+  --hl-kw:        #7c3aed;
+  --hl-func:      #1d4ed8;
+  --hl-class:     #b45309;
+  --hl-decorator: #7c3aed;
+  --hl-builtin:   #0f766e;
+  --hl-magic:     #0f766e;
+  --hl-exception: #dc2626;
+  --hl-type:      #b45309;
+  --hl-str:       #15803d;
+  --hl-doc:       #6b7280;
+  --hl-interp:    #0369a1;
+  --hl-escape:    #c2410c;
+  --hl-num:       #c2410c;
+  --hl-comment:   #6b7280;
+  --hl-op:        #0369a1;
+  --hl-punct:     #374151;
+  --hl-var:       #111827;
+  --hl-error:     #dc2626;
+}
+
+.hl-kw        { color: var(--hl-kw);        font-weight: 600; }
+.hl-func      { color: var(--hl-func); }
+.hl-class     { color: var(--hl-class);     font-weight: 600; }
+.hl-decorator { color: var(--hl-decorator); }
+.hl-builtin   { color: var(--hl-builtin); }
+.hl-magic     { color: var(--hl-magic); }
+.hl-exception { color: var(--hl-exception); font-weight: 600; }
+.hl-type      { color: var(--hl-type); }
+.hl-str       { color: var(--hl-str); }
+.hl-doc       { color: var(--hl-doc);       font-style: italic; }
+.hl-interp    { color: var(--hl-interp);    font-weight: 600; }
+.hl-escape    { color: var(--hl-escape);    font-weight: 600; }
+.hl-num       { color: var(--hl-num); }
+.hl-comment   { color: var(--hl-comment);   font-style: italic; }
+.hl-op        { color: var(--hl-op); }
+.hl-punct     { color: var(--hl-punct); }
+.hl-var       { color: var(--hl-var); }
+.hl-error     { color: var(--hl-error); text-decoration: underline wavy; }

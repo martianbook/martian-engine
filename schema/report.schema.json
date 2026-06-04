@@ -1,0 +1,176 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://martianbook.org/schema/report/0.3.0",
+  "title": "MartianReport",
+  "description": "The Martian Intermediate Representation. One report.json = one execution run.",
+  "type": "object",
+  "required": ["martian_version", "mission"],
+  "properties": {
+    "martian_version": {
+      "type": "string",
+      "description": "Version of the Martian schema this report conforms to.",
+      "example": "0.3.0"
+    },
+    "mission": { "$ref": "#/definitions/Mission" },
+    "execution": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/ExecutionNode" },
+      "default": []
+    },
+    "artifacts": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/Artifact" },
+      "default": []
+    },
+    "exceptions": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/ExceptionRecord" },
+      "default": []
+    },
+    "sections": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/Section" },
+      "default": []
+    },
+    "text_nodes": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/TextNode" },
+      "default": []
+    },
+    "dependencies": {
+      "type": "object",
+      "description": "Flat map: function_id → [child function_ids]",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" }
+      },
+      "default": {}
+    }
+  },
+  "definitions": {
+    "Status": {
+      "type": "string",
+      "enum": ["success", "failed", "skipped", "running"]
+    },
+    "ArtifactType": {
+      "type": "string",
+      "enum": ["plot", "image", "svg", "csv", "json", "text", "file"]
+    },
+    "Environment": {
+      "type": "object",
+      "required": ["language", "language_version", "platform"],
+      "properties": {
+        "language":         { "type": "string", "example": "python" },
+        "language_version": { "type": "string", "example": "3.13.0" },
+        "platform":         { "type": "string", "example": "linux" },
+        "runtime":          { "type": ["string", "null"], "example": "uv" },
+        "packages": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "default": {}
+        }
+      }
+    },
+    "Mission": {
+      "type": "object",
+      "required": ["id", "entry_point", "adapter", "adapter_version", "status", "started_at", "duration_ms", "environment"],
+      "properties": {
+        "id":              { "type": "string", "description": "Unique mission ID, e.g. mission_20260603_210000_abc123" },
+        "entry_point":     { "type": "string", "description": "Script or binary that was run, e.g. main.py" },
+        "adapter":         { "type": "string", "description": "e.g. martian-python, martian-rust" },
+        "adapter_version": { "type": "string" },
+        "status":          { "$ref": "#/definitions/Status" },
+        "started_at":      { "type": "string", "format": "date-time" },
+        "duration_ms":     { "type": "number" },
+        "environment":     { "$ref": "#/definitions/Environment" }
+      }
+    },
+    "ReturnSummary": {
+      "type": "object",
+      "required": ["type_name"],
+      "properties": {
+        "type_name":  { "type": "string" },
+        "shape":      { "type": ["array", "null"], "items": { "type": "integer" } },
+        "length":     { "type": ["integer", "null"] },
+        "preview":    { "type": ["string", "null"] },
+        "serialized": { "type": "boolean", "default": false }
+      }
+    },
+    "ExecutionNode": {
+      "type": "object",
+      "required": ["id", "name", "module", "file", "line_start", "call_order", "depth", "duration_ms", "status"],
+      "properties": {
+        "id":           { "type": "string" },
+        "name":         { "type": "string", "description": "Function name" },
+        "module":       { "type": "string" },
+        "file":         { "type": "string", "description": "Relative file path" },
+        "line_start":   { "type": "integer" },
+        "call_order":   { "type": "integer", "description": "Global execution order, 1-indexed" },
+        "depth":        { "type": "integer", "description": "Call stack depth, 0 = top level" },
+        "duration_ms":  { "type": "number" },
+        "status":       { "$ref": "#/definitions/Status" },
+        "text":         { "type": ["string", "null"], "description": "Prose from docstring or @capture(text=...)" },
+        "source_code":  { "type": ["string", "null"] },
+        "args":         { "type": "object", "additionalProperties": { "type": "string" }, "default": {} },
+        "stdout":       { "type": "array", "items": { "type": "string" }, "default": [] },
+        "stderr":       { "type": "array", "items": { "type": "string" }, "default": [] },
+        "ret":          { "oneOf": [{ "$ref": "#/definitions/ReturnSummary" }, { "type": "null" }] },
+        "parent":       { "type": ["string", "null"] },
+        "children":     { "type": "array", "items": { "type": "string" }, "default": [] },
+        "artifact_ids": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "exception_id": { "type": ["string", "null"] },
+        "section":      { "type": ["string", "null"] }
+      }
+    },
+    "Artifact": {
+      "type": "object",
+      "required": ["id", "type", "format", "path", "produced_by", "timestamp_ms"],
+      "properties": {
+        "id":           { "type": "string" },
+        "type":         { "$ref": "#/definitions/ArtifactType" },
+        "format":       { "type": "string", "example": "png" },
+        "path":         { "type": "string" },
+        "produced_by":  { "type": "string", "description": "ExecutionNode.id" },
+        "timestamp_ms": { "type": "number" },
+        "label":        { "type": ["string", "null"] }
+      }
+    },
+    "ExceptionRecord": {
+      "type": "object",
+      "required": ["id", "function_id", "type_name", "message", "traceback", "timestamp_ms"],
+      "properties": {
+        "id":           { "type": "string" },
+        "function_id":  { "type": "string" },
+        "type_name":    { "type": "string", "example": "ValueError" },
+        "message":      { "type": "string" },
+        "traceback":    { "type": "string" },
+        "timestamp_ms": { "type": "number" },
+        "handled":      { "type": "boolean", "default": false }
+      }
+    },
+    "Section": {
+      "type": "object",
+      "required": ["id", "label"],
+      "properties": {
+        "id":           { "type": "string" },
+        "label":        { "type": "string" },
+        "function_ids": { "type": "array", "items": { "type": "string" }, "default": [] }
+      }
+    },
+    "TextNode": {
+      "type": "object",
+      "required": ["id", "content", "source"],
+      "properties": {
+        "id":               { "type": "string" },
+        "content":          { "type": "string" },
+        "source":           { "type": "string", "enum": ["decorator", "user"] },
+        "anchor_id":        { "type": ["string", "null"], "description": "ExecutionNode.id this text is anchored to" },
+        "anchor_index":     { "type": "integer", "default": 0 },
+        "section":          { "type": ["string", "null"] },
+        "original_content": { "type": ["string", "null"] },
+        "created_at":       { "type": "string", "format": "date-time" },
+        "edited_at":        { "type": ["string", "null"] }
+      }
+    }
+  }
+}
